@@ -30,15 +30,9 @@ dependencies = [
 train = [
     "deepspeed>=0.12.4"
 ]
-ui = [
-  "gradio>=4.8.0",
-]
 
 [project.urls]
 Homepage = "https://github.com/resemble-ai/resemble-enhance"
-
-[project.scripts]
-resemble-enhance = "resemble_enhance.enhancer.__main__:main"
 
 [build-system]
 requires = ["setuptools>=61", "wheel"]
@@ -49,7 +43,6 @@ packages = ["resemble_enhance"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
-
 
 [tool.black]
 line-length = 120
