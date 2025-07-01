@@ -41,9 +41,9 @@ class MelSpectrogram(nn.Module):
             wav: [B, T]
         """
         device = wav.device
-        if wav.is_mps:
-            wav = wav.cpu()
-            self.to(wav.device)
+        # if wav.is_mps:
+        #     wav = wav.cpu()
+        #     self.to(wav.device)
         if self.preemphasis > 0:
             wav = torch.nn.functional.pad(wav, [1, 0], value=0)
             wav = wav[..., 1:] - self.preemphasis * wav[..., :-1]
