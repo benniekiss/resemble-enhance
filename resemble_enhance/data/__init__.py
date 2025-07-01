@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 from ..hparams import HParams
 from .dataset import Dataset
-from .utils import mix_fg_bg, rglob_audio_files
+from .utils import rglob_audio_files
 
 logger = logging.getLogger(__name__)
 

@@ -11,8 +11,10 @@ logger = logging.getLogger(__name__)
 def get_source_url(relpath):
     return f"https://huggingface.co/ResembleAI/resemble-enhance/resolve/main/{RUN_NAME}/{relpath}?download=true"
 
+
 def get_safetensors_url(relpath):
     return f"https://huggingface.co/rsxdalv/resemble-enhance/resolve/main/{relpath}?download=true"
+
 
 def get_target_path(relpath: str | Path, run_dir: str | Path | None = None):
     if run_dir is None:
@@ -39,7 +41,11 @@ def download(run_dir: str | Path | None = None, safetensors: bool = False) -> Pa
             torch.hub.download_url_to_file(url, str(path))
         return get_target_path("", run_dir=run_dir)
 
-    relpaths = ["hparams.yaml", "ds/G/latest", "ds/G/default/mp_rank_00_model_states.pt"]
+    relpaths = [
+        "hparams.yaml",
+        "ds/G/latest",
+        "ds/G/default/mp_rank_00_model_states.pt",
+    ]
     for relpath in relpaths:
         path = get_target_path(relpath, run_dir=run_dir)
         if path.exists():

@@ -49,7 +49,9 @@ class RandomRIR(Effect):
 
         length = len(wav)
 
-        wav = librosa.resample(wav, orig_sr=sr, target_sr=self.rir_rate, res_type="kaiser_fast")
+        wav = librosa.resample(
+            wav, orig_sr=sr, target_sr=self.rir_rate, res_type="kaiser_fast"
+        )
         rir = self._sample_rir()
 
         wav = signal.convolve(wav, rir, mode="same")
@@ -58,7 +60,9 @@ class RandomRIR(Effect):
         if actlev > 0.99:
             wav = (wav / actlev) * 0.98
 
-        wav = librosa.resample(wav, orig_sr=self.rir_rate, target_sr=sr, res_type="kaiser_fast")
+        wav = librosa.resample(
+            wav, orig_sr=self.rir_rate, target_sr=sr, res_type="kaiser_fast"
+        )
 
         if abs(length - len(wav)) > 10:
             _logger.warning(f"length mismatch: {length} vs {len(wav)}")

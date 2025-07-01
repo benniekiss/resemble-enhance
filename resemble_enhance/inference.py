@@ -120,7 +120,9 @@ def remove_weight_norm_recursively(module):
             pass
 
 
-def inference(model, dwav, sr, device, chunk_seconds: float = 30.0, overlap_seconds: float = 1.0):
+def inference(
+    model, dwav, sr, device, chunk_seconds: float = 30.0, overlap_seconds: float = 1.0
+):
     remove_weight_norm_recursively(model)
 
     hp: HParams = model.hp
@@ -150,7 +152,9 @@ def inference(model, dwav, sr, device, chunk_seconds: float = 30.0, overlap_seco
 
     chunks = []
     for start in trange(0, dwav.shape[-1], hop_length):
-        chunks.append(inference_chunk(model, dwav[start : start + chunk_length], sr, device))
+        chunks.append(
+            inference_chunk(model, dwav[start : start + chunk_length], sr, device)
+        )
 
     hwav = merge_chunks(chunks, chunk_length, hop_length, sr=sr, length=dwav.shape[-1])
 
@@ -158,6 +162,8 @@ def inference(model, dwav, sr, device, chunk_seconds: float = 30.0, overlap_seco
         torch.cuda.synchronize()
 
     elapsed_time = time.perf_counter() - start_time
-    logger.info(f"Elapsed time: {elapsed_time:.3f} s, {hwav.shape[-1] / elapsed_time / 1000:.3f} kHz")
+    logger.info(
+        f"Elapsed time: {elapsed_time:.3f} s, {hwav.shape[-1] / elapsed_time / 1000:.3f} kHz"
+    )
 
     return hwav, sr

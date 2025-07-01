@@ -26,11 +26,15 @@ class EngineLoader(Protocol):
 
 
 class GenFeeder(Protocol):
-    def __call__(self, engine: Engine, batch: dict[str, Tensor]) -> tuple[Tensor, dict[str, Tensor]]: ...
+    def __call__(
+        self, engine: Engine, batch: dict[str, Tensor]
+    ) -> tuple[Tensor, dict[str, Tensor]]: ...
 
 
 class DisFeeder(Protocol):
-    def __call__(self, engine: Engine, batch: dict[str, Tensor] | None, fake: Tensor) -> dict[str, Tensor]: ...
+    def __call__(
+        self, engine: Engine, batch: dict[str, Tensor] | None, fake: Tensor
+    ) -> dict[str, Tensor]: ...
 
 
 @dataclass
@@ -137,12 +141,16 @@ class TrainLoop:
                 step = self.global_step + 1
 
                 # Send data to the GPU
-                batch = tree_map(lambda x: x.to(device) if isinstance(x, Tensor) else x, batch)
+                batch = tree_map(
+                    lambda x: x.to(device) if isinstance(x, Tensor) else x, batch
+                )
 
                 stats = {"step": step}
 
                 # Include step == 1 for sanity check
-                gan_started = gan_start_step is not None and (step >= gan_start_step or step == 1)
+                gan_started = gan_start_step is not None and (
+                    step >= gan_start_step or step == 1
+                )
                 gan_started &= engine_D is not None
 
                 # Generator step
@@ -159,7 +167,9 @@ class TrainLoop:
 
                 loss_G = sum(losses.values())
                 stats |= {f"G/{k}": v.item() for k, v in losses.items()}
-                stats |= {f"G/{k}": v for k, v in engine_G.gather_attribute("stats").items()}
+                stats |= {
+                    f"G/{k}": v for k, v in engine_G.gather_attribute("stats").items()
+                }
                 del losses
 
                 assert isinstance(loss_G, Tensor)
@@ -180,7 +190,9 @@ class TrainLoop:
                     assert self.feed_D is not None
 
                     engine_D.unfreeze_()
-                    losses = self.feed_D(engine=engine_D, batch=batch, fake=fake.detach())
+                    losses = self.feed_D(
+                        engine=engine_D, batch=batch, fake=fake.detach()
+                    )
                     del fake
 
                     assert isinstance(losses, dict)
@@ -188,7 +200,10 @@ class TrainLoop:
                     assert isinstance(loss_D, Tensor)
 
                     stats |= {f"D/{k}": v.item() for k, v in losses.items()}
-                    stats |= {f"D/{k}": v for k, v in engine_D.gather_attribute("stats").items()}
+                    stats |= {
+                        f"D/{k}": v
+                        for k, v in engine_D.gather_attribute("stats").items()
+                    }
                     del losses
 
                     if loss_D.isnan().item():
@@ -204,13 +219,24 @@ class TrainLoop:
 
                 torch.cuda.synchronize()
                 stats["elapsed_time"] = time.time() - start_time
-                stats = tree_map(lambda x: float(f"{x:.4g}") if isinstance(x, float) else x, stats)
+                stats = tree_map(
+                    lambda x: float(f"{x:.4g}") if isinstance(x, float) else x, stats
+                )
                 logger.info(json.dumps(stats, indent=0))
 
                 command = non_blocking_input()
 
-                evaling = step % eval_every == 0 or step in warmup_steps or command.strip() == "eval"
-                if eval_fn is not None and is_global_leader() and eval_dir is not None and evaling:
+                evaling = (
+                    step % eval_every == 0
+                    or step in warmup_steps
+                    or command.strip() == "eval"
+                )
+                if (
+                    eval_fn is not None
+                    and is_global_leader()
+                    and eval_dir is not None
+                    and evaling
+                ):
                     engine_G.eval()
                     eval_fn(engine_G, eval_dir=eval_dir)
                     engine_G.train()

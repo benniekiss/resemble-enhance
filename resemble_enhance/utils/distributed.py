@@ -17,7 +17,13 @@ def get_free_port():
 
 @cache
 def fix_unset_envs():
-    envs = dict(RANK="0", WORLD_SIZE="1", MASTER_ADDR="localhost", MASTER_PORT=str(get_free_port()), LOCAL_RANK="0")
+    envs = dict(
+        RANK="0",
+        WORLD_SIZE="1",
+        MASTER_ADDR="localhost",
+        MASTER_PORT=str(get_free_port()),
+        LOCAL_RANK="0",
+    )
 
     for key in envs:
         value = os.getenv(key)
@@ -51,7 +57,9 @@ def is_global_leader():
     return global_rank() == 0
 
 
-def leader_only(leader_only_type, fn: Callable | None = None, boardcast_return=False) -> Callable:
+def leader_only(
+    leader_only_type, fn: Callable | None = None, boardcast_return=False
+) -> Callable:
     """
     Args:
         fn: The function to decorate
@@ -61,7 +69,9 @@ def leader_only(leader_only_type, fn: Callable | None = None, boardcast_return=F
 
     def wrapper(fn):
         if hasattr(fn, "__leader_only_type__"):
-            raise RuntimeError(f"Function {fn.__name__} has already been decorated with {fn.__leader_only_type__}")
+            raise RuntimeError(
+                f"Function {fn.__name__} has already been decorated with {fn.__leader_only_type__}"
+            )
 
         fn.__leader_only_type__ = leader_only_type
 

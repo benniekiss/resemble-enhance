@@ -120,7 +120,9 @@ class HParams:
                 for k, v in asdict(hp).items():
                     if getattr(hps[0], k) != v:
                         errors[k] = f"{getattr(hps[0], k)} != {v}"
-                raise ValueError(f"Found inconsistent hparams: {errors}, consider deleting {run_dir}")
+                raise ValueError(
+                    f"Found inconsistent hparams: {errors}, consider deleting {run_dir}"
+                )
 
         return hps[0]
 

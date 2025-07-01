@@ -30,11 +30,13 @@ class WNLayer(nn.Module):
         if local_dim is not None:
             self.lconv = nn.Conv1d(local_dim, local_output_dim, 1)
 
-        self.dconv = nn.Conv1d(hidden_dim, local_output_dim, kernel_size, dilation=dilation, padding="same")
+        self.dconv = nn.Conv1d(
+            hidden_dim, local_output_dim, kernel_size, dilation=dilation, padding="same"
+        )
 
         self.out = nn.Conv1d(hidden_dim, 2 * hidden_dim, kernel_size=1)
 
-    def forward(self, z, l, g):
+    def forward(self, z, i, g):
         identity = z
 
         if g is not None:
@@ -44,8 +46,8 @@ class WNLayer(nn.Module):
 
         z = self.dconv(z)
 
-        if l is not None:
-            z = z + self.lconv(l)
+        if i is not None:
+            z = z + self.lconv(i)
 
         z = _fused_tanh_sigmoid(z)
 
@@ -98,23 +100,23 @@ class WN(nn.Module):
 
         self.end = nn.Conv1d(hidden_dim, output_dim, 1)
 
-    def forward(self, z, l=None, g=None):
+    def forward(self, z, i=None, g=None):
         """
         Args:
             z: input (b c t)
-            l: local condition (b c t)
+            i: local condition (b c t)
             g: global condition (b d)
         """
         z = self.start(z)
 
-        if l is not None:
-            l = self.local_norm(l)
+        if i is not None:
+            i = self.local_norm(i)
 
         # Skips
         s_list = []
 
         for layer in self.layers:
-            z, s = layer(z, l, g)
+            z, s = layer(z, i, g)
             s_list.append(s)
 
         s_list = torch.stack(s_list, dim=0).sum(dim=0)

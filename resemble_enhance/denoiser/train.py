@@ -21,17 +21,23 @@ def load_G(run_dir: Path, hp: HParams | None = None, training=True):
         hp = HParams.load(run_dir)
     assert isinstance(hp, HParams)
     model = Denoiser(hp)
-    engine = Engine(model=model, config_class=DeepSpeedConfig(hp.deepspeed_config), ckpt_dir=run_dir / "ds" / "G")
+    engine = Engine(
+        model=model,
+        config_class=DeepSpeedConfig(hp.deepspeed_config),
+        ckpt_dir=run_dir / "ds" / "G",
+    )
     if training:
         engine.load_checkpoint()
     else:
-        engine.load_checkpoint(load_optimizer_states=False, load_lr_scheduler_states=False)
+        engine.load_checkpoint(
+            load_optimizer_states=False, load_lr_scheduler_states=False
+        )
     return engine
 
 
 def save_wav(path: Path, wav: Tensor, rate: int):
-    wav = wav.detach().cpu().numpy()
-    soundfile.write(path, wav, samplerate=rate)
+    arr = wav.detach().cpu().numpy()
+    soundfile.write(path, arr, samplerate=rate)
 
 
 def main():
@@ -51,12 +57,15 @@ def main():
     train_dl, val_dl = create_dataloaders(hp, mode="denoiser")
 
     def feed_G(engine: Engine, batch: dict[str, Tensor]):
-        alpha_fn = lambda: random.uniform(*hp.mix_alpha_range)
         if random.random() < hp.distort_prob:
             fg_wavs = batch["fg_dwavs"]
         else:
             fg_wavs = batch["fg_wavs"]
-        mx_dwavs = mix_fg_bg(fg_wavs, batch["bg_dwavs"], alpha=alpha_fn)
+        mx_dwavs = mix_fg_bg(
+            fg_wavs,
+            batch["bg_dwavs"],
+            alpha=random.uniform(*hp.mix_alpha_range),
+        )
         pred = engine(mx_dwavs, fg_wavs)
         losses = engine.gather_attribute("losses", prefix="losses")
         return pred, losses
@@ -69,7 +78,9 @@ def main():
         step = engine.global_step
 
         for i, batch in enumerate(tqdm(val_dl), 1):
-            batch = tree_map(lambda x: x.to(args.device) if isinstance(x, Tensor) else x, batch)
+            batch = tree_map(
+                lambda x: x.to(args.device) if isinstance(x, Tensor) else x, batch
+            )
 
             fg_dwavs = batch["fg_dwavs"]  # 1 t
             mx_dwavs = mix_fg_bg(fg_dwavs, batch["bg_dwavs"])
@@ -80,14 +91,17 @@ def main():
             pred_fg_mels = model.to_mel(pred_fg_dwavs)  # 1 c t
 
             rate = model.hp.wav_rate
-            get_path = lambda suffix: eval_dir / f"step_{step:08}_{i:03}{suffix}"
+            input_path = eval_dir / f"step_{step:08}_{i:03}_input.wav"
+            predict_path = eval_dir / f"step_{step:08}_{i:03}_predict.wav"
+            target_path = eval_dir / f"step_{step:08}_{i:03}_target.wav"
+            png_path = eval_dir / f"step_{step:08}_{i:03}.png"
 
-            save_wav(get_path("_input.wav"), mx_dwavs[0], rate=rate)
-            save_wav(get_path("_predict.wav"), pred_fg_dwavs[0], rate=rate)
-            save_wav(get_path("_target.wav"), fg_dwavs[0], rate=rate)
+            save_wav(input_path, mx_dwavs[0], rate=rate)
+            save_wav(predict_path, pred_fg_dwavs[0], rate=rate)
+            save_wav(target_path, fg_dwavs[0], rate=rate)
 
             save_mels(
-                get_path(".png"),
+                png_path,
                 cond_mel=mx_mels[0].cpu().numpy(),
                 pred_mel=pred_fg_mels[0].cpu().numpy(),
                 targ_mel=fg_mels[0].cpu().numpy(),

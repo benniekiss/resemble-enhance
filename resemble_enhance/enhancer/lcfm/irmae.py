@@ -1,7 +1,6 @@
 import logging
 from dataclasses import dataclass
 
-import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.nn.utils.parametrizations import weight_norm
@@ -64,7 +63,12 @@ class IRMAE(nn.Module):
             nn.Conv1d(input_dim, hidden_dim, 3, padding="same"),
             *[ResBlock(hidden_dim) for _ in range(4)],
             # Try to obtain compact representation (https://proceedings.neurips.cc/paper/2020/file/a9078e8653368c9c291ae2f8b74012e7-Paper.pdf)
-            *[nn.Conv1d(hidden_dim if i == 0 else latent_dim, latent_dim, 1, bias=False) for i in range(num_irms)],
+            *[
+                nn.Conv1d(
+                    hidden_dim if i == 0 else latent_dim, latent_dim, 1, bias=False
+                )
+                for i in range(num_irms)
+            ],
             nn.Tanh(),
         )
 

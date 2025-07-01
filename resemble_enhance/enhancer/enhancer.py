@@ -69,7 +69,10 @@ class Enhancer(nn.Module):
         self.register_buffer("dummy", torch.zeros(1))
 
         if self.hp.enhancer_stage1_run_dir is not None:
-            pretrained_path = self.hp.enhancer_stage1_run_dir / "ds/G/default/mp_rank_00_model_states.pt"
+            pretrained_path = (
+                self.hp.enhancer_stage1_run_dir
+                / "ds/G/default/mp_rank_00_model_states.pt"
+            )
             self._load_pretrained(pretrained_path)
 
         logger.info(f"{self.__class__.__name__} summary")
@@ -78,7 +81,9 @@ class Enhancer(nn.Module):
     def _load_pretrained(self, path):
         # Clone is necessary as otherwise it holds a reference to the original model
         cfm_state_dict = {k: v.clone() for k, v in self.lcfm.cfm.state_dict().items()}
-        denoiser_state_dict = {k: v.clone() for k, v in self.denoiser.state_dict().items()}
+        denoiser_state_dict = {
+            k: v.clone() for k, v in self.denoiser.state_dict().items()
+        }
         state_dict = torch.load(path, map_location="cpu")["module"]
         self.load_state_dict(state_dict, strict=False)
         self.lcfm.cfm.load_state_dict(cfm_state_dict)  # Reset cfm
@@ -86,12 +91,16 @@ class Enhancer(nn.Module):
         logger.info(f"Loaded pretrained model from {path}")
 
     def summarize(self):
-        npa_train = lambda m: sum(p.numel() for p in m.parameters() if p.requires_grad)
-        npa = lambda m: sum(p.numel() for p in m.parameters())
         rows = []
         for name, module in self.named_children():
-            rows.append(dict(name=name, trainable=npa_train(module), total=npa(module)))
-        rows.append(dict(name="total", trainable=npa_train(self), total=npa(self)))
+            trainable = sum(p.numel() for p in module.parameters() if p.requires_grad)
+            total = sum(p.numel() for p in module.parameters())
+            rows.append(dict(name=name, trainable=trainable, total=total))
+
+        trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        total = sum(p.numel() for p in self.parameters())
+        rows.append(dict(name="total", trainable=trainable, total=total))
+
         df = pd.DataFrame(rows)
         return df.to_markdown(index=False)
 
@@ -167,7 +176,9 @@ class Enhancer(nn.Module):
             if self.training:
                 lambd = Beta(0.2, 0.2).sample(x.shape[:1]).to(x.device)
                 lambd = lambd[:, None, None]
-                x_mel_denoised = self.normalizer(self.to_mel(self._may_denoise(x, z)), update=False)
+                x_mel_denoised = self.normalizer(
+                    self.to_mel(self._may_denoise(x, z)), update=False
+                )
                 x_mel_denoised = x_mel_denoised.detach()
                 x_mel_denoised = lambd * x_mel_denoised + (1 - lambd) * x_mel_original
                 self._visualize(x_mel_original, x_mel_denoised)
@@ -176,9 +187,13 @@ class Enhancer(nn.Module):
                 if lambd == 0:
                     x_mel_denoised = x_mel_original
                 else:
-                    x_mel_denoised = self.normalizer(self.to_mel(self._may_denoise(x, z)), update=False)
+                    x_mel_denoised = self.normalizer(
+                        self.to_mel(self._may_denoise(x, z)), update=False
+                    )
                     x_mel_denoised = x_mel_denoised.detach()
-                    x_mel_denoised = lambd * x_mel_denoised + (1 - lambd) * x_mel_original
+                    x_mel_denoised = (
+                        lambd * x_mel_denoised + (1 - lambd) * x_mel_original
+                    )
         else:
             x_mel_denoised = x_mel_original
 
@@ -188,7 +203,9 @@ class Enhancer(nn.Module):
         if self.hp.force_gaussian_prior:
             lcfm_decoded = self.lcfm(x_mel_denoised, y_mel, ψ0=None)  # (b d t)
         else:
-            lcfm_decoded = self.lcfm(x_mel_denoised, y_mel, ψ0=x_mel_original)  # (b d t)
+            lcfm_decoded = self.lcfm(
+                x_mel_denoised, y_mel, ψ0=x_mel_original
+            )  # (b d t)
 
         if lcfm_decoded is None:
             o = None

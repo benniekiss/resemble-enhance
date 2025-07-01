@@ -22,11 +22,17 @@ def load_G(run_dir: Path, hp: HParams | None = None, training=True):
         hp = HParams.load(run_dir)
         assert isinstance(hp, HParams)
     model = Enhancer(hp)
-    engine = Engine(model=model, config_class=DeepSpeedConfig(hp.deepspeed_config), ckpt_dir=run_dir / "ds" / "G")
+    engine = Engine(
+        model=model,
+        config_class=DeepSpeedConfig(hp.deepspeed_config),
+        ckpt_dir=run_dir / "ds" / "G",
+    )
     if training:
         engine.load_checkpoint()
     else:
-        engine.load_checkpoint(load_optimizer_states=False, load_lr_scheduler_states=False)
+        engine.load_checkpoint(
+            load_optimizer_states=False, load_lr_scheduler_states=False
+        )
     return engine
 
 
@@ -35,7 +41,11 @@ def load_D(run_dir: Path, hp: HParams | None):
         hp = HParams.load(run_dir)
         assert isinstance(hp, HParams)
     model = Discriminator(hp)
-    engine = Engine(model=model, config_class=DeepSpeedConfig(hp.deepspeed_config), ckpt_dir=run_dir / "ds" / "D")
+    engine = Engine(
+        model=model,
+        config_class=DeepSpeedConfig(hp.deepspeed_config),
+        ckpt_dir=run_dir / "ds" / "D",
+    )
     engine.load_checkpoint()
     return engine
 
@@ -90,7 +100,9 @@ def main():
         step = engine.global_step
 
         for i, batch in enumerate(tqdm(val_dl), 1):
-            batch = tree_map(lambda x: x.to(args.device) if isinstance(x, Tensor) else x, batch)
+            batch = tree_map(
+                lambda x: x.to(args.device) if isinstance(x, Tensor) else x, batch
+            )
 
             fg_wavs = batch["fg_wavs"]  # 1 t
 
@@ -108,14 +120,18 @@ def main():
             pred_fg_mels = model.to_mel(pred_fg_wavs)  # 1 c t
 
             rate = model.hp.wav_rate
-            get_path = lambda suffix: eval_dir / f"step_{step:08}_{i:03}{suffix}"
 
-            save_wav(get_path("_input.wav"), in_dwavs[0], rate=rate)
-            save_wav(get_path("_predict.wav"), pred_fg_wavs[0], rate=rate)
-            save_wav(get_path("_target.wav"), fg_wavs[0], rate=rate)
+            input_path = eval_dir / f"step_{step:08}_{i:03}_input.wav"
+            predict_path = eval_dir / f"step_{step:08}_{i:03}_predict.wav"
+            target_path = eval_dir / f"step_{step:08}_{i:03}_target.wav"
+            png_path = eval_dir / f"step_{step:08}_{i:03}.png"
+
+            save_wav(input_path, in_dwavs[0], rate=rate)
+            save_wav(predict_path, pred_fg_wavs[0], rate=rate)
+            save_wav(target_path, fg_wavs[0], rate=rate)
 
             save_mels(
-                get_path(".png"),
+                png_path,
                 cond_mel=in_mels[0].cpu().numpy(),
                 pred_mel=pred_fg_mels[0].cpu().numpy(),
                 targ_mel=fg_mels[0].cpu().numpy(),

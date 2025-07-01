@@ -3,7 +3,6 @@ from enum import Enum
 
 import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
 from torch import Tensor, nn
 
 from .cfm import CFM
@@ -70,19 +69,34 @@ class LCFM(nn.Module):
             return
 
         plt.subplot(221)
-        plt.imshow(y[0].detach().cpu().numpy(), aspect="auto", origin="lower", interpolation="none")
+        plt.imshow(
+            y[0].detach().cpu().numpy(),
+            aspect="auto",
+            origin="lower",
+            interpolation="none",
+        )
         plt.title("GT")
 
         plt.subplot(222)
         y_ = y_[:, : y.shape[1]]
-        plt.imshow(y_[0].detach().cpu().numpy(), aspect="auto", origin="lower", interpolation="none")
+        plt.imshow(
+            y_[0].detach().cpu().numpy(),
+            aspect="auto",
+            origin="lower",
+            interpolation="none",
+        )
         plt.title("Posterior")
 
         plt.subplot(223)
         z_ = self.cfm(x)
         y__ = self.ae.decode(z_)
         y__ = y__[:, : y.shape[1]]
-        plt.imshow(y__[0].detach().cpu().numpy(), aspect="auto", origin="lower", interpolation="none")
+        plt.imshow(
+            y__[0].detach().cpu().numpy(),
+            aspect="auto",
+            origin="lower",
+            interpolation="none",
+        )
         plt.title("C-Prior")
         del y__
 
@@ -90,7 +104,12 @@ class LCFM(nn.Module):
         z_ = torch.randn_like(z_)
         y__ = self.ae.decode(z_)
         y__ = y__[:, : y.shape[1]]
-        plt.imshow(y__[0].detach().cpu().numpy(), aspect="auto", origin="lower", interpolation="none")
+        plt.imshow(
+            y__[0].detach().cpu().numpy(),
+            aspect="auto",
+            origin="lower",
+            interpolation="none",
+        )
         plt.title("Prior")
         del z_, y__
 
@@ -139,14 +158,20 @@ class LCFM(nn.Module):
 
             h = self.ae.decode(z)
         else:
-            ae_output: IRMAEOutput = self.ae(y, skip_decoding=self.mode == self.Mode.CFM)
+            ae_output: IRMAEOutput = self.ae(
+                y, skip_decoding=self.mode == self.Mode.CFM
+            )
 
             if self.mode == self.Mode.CFM:
                 _ = self.cfm(x, self._scale(ae_output.latent.detach()), ψ0=ψ0)
 
             h = ae_output.decoded
 
-            if h is not None and self.global_step is not None and self.global_step % 100 == 0:
+            if (
+                h is not None
+                and self.global_step is not None
+                and self.global_step % 100 == 0
+            ):
                 self._visualize(x[:1], y[:1], h[:1])
 
         return h

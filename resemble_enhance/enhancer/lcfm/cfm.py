@@ -39,7 +39,9 @@ class Solver:
 
         self._camera = None
         self._mel_fn = mel_fn
-        self._time_mapping = partial(self.exponential_decay_mapping, n=time_mapping_divisor)
+        self._time_mapping = partial(
+            self.exponential_decay_mapping, n=time_mapping_divisor
+        )
 
     def configurate_(self, nfe=None, method=None):
         if nfe is None:
@@ -49,7 +51,9 @@ class Solver:
             method = self.method
 
         if nfe == 1 and method in ("midpoint", "rk4"):
-            logger.warning(f"1 NFE is not supported for {method}, using euler method instead.")
+            logger.warning(
+                f"1 NFE is not supported for {method}, using euler method instead."
+            )
             method = "euler"
 
         self.nfe = nfe
@@ -104,7 +108,9 @@ class Solver:
                 )
             else:
                 # Spectrogram, b c t
-                plt.imshow(ψt.detach().cpu().numpy()[0], origin="lower", interpolation="none")
+                plt.imshow(
+                    ψt.detach().cpu().numpy()[0], origin="lower", interpolation="none"
+                )
             ax = plt.gca()
             ax.text(0.5, 1.01, f"t={t:.2f}", transform=ax.transAxes, ha="center")
             camera.snap()
@@ -363,7 +369,9 @@ class CFM(nn.Module):
         ψ1 = self.solver(f=f, ψ0=ψ0, t0=t0)
         return ψ1
 
-    def forward(self, x: Tensor, y: Tensor | None = None, ψ0: Tensor | None = None, t0=0.0):
+    def forward(
+        self, x: Tensor, y: Tensor | None = None, ψ0: Tensor | None = None, t0=0.0
+    ):
         if y is None:
             y = self.sample(x, ψ0=ψ0, t0=t0)
         else:
