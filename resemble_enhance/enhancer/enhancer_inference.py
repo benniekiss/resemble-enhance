@@ -2,13 +2,12 @@
 Enhancer model for inference without training dependencies.
 This is a copy of the enhancer module but with inference-only imports.
 """
+
 import logging
 
 import matplotlib.pyplot as plt
-import pandas as pd
 import torch
 from torch import Tensor, nn
-from torch.distributions import Beta
 
 from ..common import Normalizer
 from ..melspec import MelSpectrogram
@@ -28,7 +27,7 @@ def global_leader_only(fn):
 # Simple TrainLoop replacement for inference
 class TrainLoop:
     """No-op TrainLoop class for inference."""
-    
+
     @staticmethod
     def get_running_loop():
         """Always return None for inference (no training loop)."""
@@ -77,7 +76,7 @@ class EnhancerInference(nn.Module):
 
         self.mel_fn = MelSpectrogram(hp)
         self.vocoder = UnivNet(self.hp, vocoder_input_dim)
-        
+
         # For inference, denoiser will be set separately if needed
         self.denoiser = None
         self.normalizer = Normalizer()
@@ -87,16 +86,12 @@ class EnhancerInference(nn.Module):
         self.dummy: Tensor
         self.register_buffer("dummy", torch.zeros(1))
 
-    @property
-    def mel_fn(self):
-        return self.vocoder.mel_fn
-
     def configure_denoiser_(self, denoiser):
         self.denoiser = denoiser
 
     def configurate_(self, **kwargs):
         """Configure model parameters for inference.
-        
+
         Args:
             nfe: number of function evaluations
             solver: solver method
@@ -109,7 +104,7 @@ class EnhancerInference(nn.Module):
             self.lcfm.cfm.solver.configurate_(kwargs["nfe"], None)
         elif "solver" in kwargs:
             self.lcfm.cfm.solver.configurate_(None, kwargs["solver"])
-            
+
         if "tau" in kwargs:
             self.lcfm.eval_tau_(kwargs["tau"])
         if "lambd" in kwargs:
@@ -122,7 +117,7 @@ class EnhancerInference(nn.Module):
 
     def forward(self, x: Tensor, y: Tensor | None = None, z: Tensor | None = None):
         """Forward pass for inference.
-        
+
         Args:
             x: (b t), mix wavs (fg + bg)
             y: (b t), fg clean wavs
@@ -147,7 +142,9 @@ class EnhancerInference(nn.Module):
             if lambd == 0:
                 x_mel_denoised = x_mel_original
             else:
-                x_mel_denoised = self.normalizer(self.to_mel(self._may_denoise(x, z)), update=False)
+                x_mel_denoised = self.normalizer(
+                    self.to_mel(self._may_denoise(x, z)), update=False
+                )
                 x_mel_denoised = x_mel_denoised.detach()
                 x_mel_denoised = lambd * x_mel_denoised + (1 - lambd) * x_mel_original
         else:
@@ -156,10 +153,12 @@ class EnhancerInference(nn.Module):
         y_mel = _maybe(self.to_mel)(y)  # (b d t)
         y_mel = _maybe(self.normalizer)(y_mel)
 
-        if hasattr(self.hp, 'force_gaussian_prior') and self.hp.force_gaussian_prior:
+        if hasattr(self.hp, "force_gaussian_prior") and self.hp.force_gaussian_prior:
             lcfm_decoded = self.lcfm(x_mel_denoised, y_mel, ψ0=None)  # (b d t)
         else:
-            lcfm_decoded = self.lcfm(x_mel_denoised, y_mel, ψ0=x_mel_original)  # (b d t)
+            lcfm_decoded = self.lcfm(
+                x_mel_denoised, y_mel, ψ0=x_mel_original
+            )  # (b d t)
 
         if lcfm_decoded is None:
             o = None
@@ -170,17 +169,12 @@ class EnhancerInference(nn.Module):
 
     def to_mel(self, x, drop_last=True):
         """Convert waveform to mel-spectrogram.
-        
+
         Args:
             x: (b t), wavs
         Returns:
             o: (b c t), mels
         """
-        if drop_last:
-            return self.mel_fn(x)[..., :-1]  # (b d t)
-        return self.mel_fn(x)
-
-    def to_mel(self, x, drop_last=True):
         if drop_last:
             return self.mel_fn(x)[..., :-1]  # (b d t)
         return self.mel_fn(x)
